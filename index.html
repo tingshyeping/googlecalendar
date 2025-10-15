@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="fylogo.png" type="image/png">
+    <title>Google Calendar</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'KaiTi', 'Arial', sans-serif;
+        }
+        
+        body {
+            background: url('OMEN_Techrunner.png') no-repeat center center fixed;
+            background-size: cover;
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: -1;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            height: calc(100vh - 40px);
+        }
+        
+        /* 主内容区域 - 倒计时 */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .task-title {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .task-description {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            max-width: 600px;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+        
+        .countdown {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 25px;
+            margin: 40px 0;
+        }
+        
+        .time-unit {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 25px 20px;
+            border-radius: 15px;
+            min-width: 140px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .time-unit:hover {
+            transform: translateY(-5px);
+        }
+        
+        .time-value {
+            font-size: 3.5rem;
+            font-weight: 700;
+            line-height: 1;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .time-label {
+            font-size: 1.1rem;
+            margin-top: 10px;
+            opacity: 0.9;
+        }
+        
+        .progress-container {
+            width: 100%;
+            max-width: 600px;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            margin: 30px 0;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff9a9e 0%, #fad0c4 100%);
+            border-radius: 10px;
+            width: 0%;
+            transition: width 1s ease;
+        }
+        
+        /* 任务选择器 */
+        .task-selector {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .task-select {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 1rem;
+            width: 300px;
+            max-width: 100%;
+        }
+        
+        .task-select option {
+            background: #2a2a2a;
+            color: white;
+        }
+        
+        .current-task {
+            font-size: 1.3rem;
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            border-left: 4px solid #4285f4;
+        }
+        
+        /* API状态 */
+        .api-status {
+            font-size: 0.9rem;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 10px 0;
+        }
+        
+        .api-status.connected {
+            background: rgba(76, 175, 80, 0.3);
+            color: #a5d6a7;
+        }
+        
+        .api-status.error {
+            background: rgba(244, 67, 54, 0.3);
+            color: #ffab91;
+        }
+        
+        /* 侧边栏 */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .current-time-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .current-time {
+            font-size: 2.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .current-date {
+            font-size: 1.3rem;
+            opacity: 0.9;
+        }
+        
+        .calendar-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .calendar-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .calendar-iframe-container {
+            flex-grow: 1;
+            border-radius: 10px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.9);
+        }
+        
+        .calendar-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+        
+        .calendar-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .calendar-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.3s;
+            font-size: 0.9rem;
+            flex: 1;
+            justify-content: center;
+        }
+        
+        .calendar-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .calendar-btn.primary {
+            background: #4285f4;
+        }
+        
+        .calendar-btn.primary:hover {
+            background: #3367d6;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+            
+            .sidebar {
+                grid-row: 1;
+                flex-direction: row;
+            }
+            
+            .current-time-card {
+                flex: 1;
+            }
+            
+            .calendar-card {
+                flex: 2;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                flex-direction: column;
+            }
+            
+            .task-title {
+                font-size: 2rem;
+            }
+            
+            .time-unit {
+                min-width: 100px;
+                padding: 20px 15px;
+            }
+            
+            .time-value {
+                font-size: 2.5rem;
+            }
+            
+            .current-time {
+                font-size: 2.2rem;
+            }
+            
+            .calendar-iframe-container {
+                height: 400px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .countdown {
+                gap: 15px;
+            }
+            
+            .time-unit {
+                min-width: 80px;
+                padding: 15px 10px;
+            }
+            
+            .time-value {
+                font-size: 2rem;
+            }
+            
+            .current-time {
+                font-size: 1.8rem;
+            }
+            
+            .calendar-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 主内容区域 - 倒计时 -->
+        <div class="main-content">
+            <h1 class="task-title">任务倒计时</h1>
+            
+            <!-- 任务选择器 -->
+            <div class="task-selector">
+                <select class="task-select" id="taskSelect">
+                    <option value="">从Google Calendar选择任务</option>
+                </select>
+            </div>
+            
+            <!-- 当前任务显示 -->
+            <div class="current-task" id="currentTask">
+                请连接Google Calendar并选择任务
+            </div>
+            
+            <p class="task-description">距离目标日期还有</p>
+            
+            <div class="countdown">
+                <div class="time-unit">
+                    <div class="time-value" id="days">00</div>
+                    <div class="time-label">天</div>
+                </div>
+                <div class="time-unit">
+                    <div class="time-value" id="hours">00</div>
+                    <div class="time-label">小时</div>
+                </div>
+                <div class="time-unit">
+                    <div class="time-value" id="minutes">00</div>
+                    <div class="time-label">分钟</div>
+                </div>
+                <div class="time-unit">
+                    <div class="time-value" id="seconds">00</div>
+                    <div class="time-label">秒</div>
+                </div>
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar"></div>
+            </div>
+            
+            <p class="motivation" id="motivation-text">连接Google Calendar以开始倒计时</p>
+            
+            <!-- API状态显示 -->
+            <div class="api-status" id="apiStatus">
+                <i class="fas fa-info-circle"></i> 点击下方按钮连接Google Calendar
+            </div>
+            
+            <!-- Google Calendar API 按钮 -->
+            <div class="calendar-actions" style="margin-top: 20px;">
+                <button class="calendar-btn primary" id="connectBtn">
+                    <i class="fab fa-google"></i>
+                    连接 Google Calendar
+                </button>
+                <button class="calendar-btn" id="refreshBtn">
+                    <i class="fas fa-sync-alt"></i>
+                    刷新任务列表
+                </button>
+            </div>
+        </div>
+        
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="current-time-card">
+                <div class="current-time" id="current-time">00:00:00</div>
+                <div class="current-date" id="current-date">2023年11月15日 星期三</div>
+            </div>
+            
+            <div class="calendar-card">
+                <div class="calendar-header">
+                    <h2 class="calendar-title">我的日历</h2>
+                </div>
+                
+                <div class="calendar-iframe-container">
+                    <iframe class="calendar-iframe" 
+                            src="https://calendar.google.com/calendar/embed?src=232094tin%40fyk.edu.my&ctz=Asia%2FSingapore"
+                            frameborder="0"
+                            scrolling="no">
+                    </iframe>
+                </div>
+                
+                <div class="calendar-actions">
+                    <button class="calendar-btn primary" onclick="refreshCalendar()">
+                        <i class="fas fa-sync-alt"></i>
+                        刷新日历
+                    </button>
+                    <button class="calendar-btn" onclick="openCalendarInNewTab()">
+                        <i class="fab fa-google"></i>
+                        在新标签页打开
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google API 客户端库 -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+
+    <script>
+        // 配置信息 - 您需要替换这些值
+        const CLIENT_ID = '763317326335-5glikgutlgohiqatlktt6uad672f4892.apps.googleusercontent.com'; // 从Google Cloud Console获取
+        const API_KEY = 'AIzaSyD5hbQlgN3OA5ahGUiuLPWWnE-dDYXaW_U'; // 从Google Cloud Console获取
+        const DISCOVERY_DOC = 'https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest';
+        const SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
+
+        // 全局变量
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+        let currentTaskDate = null;
+        let calendarEvents = [];
+
+        // Google API 初始化
+        function gapiLoaded() {
+            gapi.load('client', initializeGapiClient);
+        }
+
+        async function initializeGapiClient() {
+            try {
+                await gapi.client.init({
+                    apiKey: API_KEY,
+                    discoveryDocs: [DISCOVERY_DOC],
+                });
+                gapiInited = true;
+                updateSigninStatus();
+            } catch (error) {
+                console.error('Error initializing Google API client:', error);
+                document.getElementById('apiStatus').innerHTML = 
+                    '<i class="fas fa-exclamation-triangle"></i> Google API初始化失败';
+                document.getElementById('apiStatus').className = 'api-status error';
+            }
+        }
+
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: '', // 在授权请求中定义
+            });
+            gisInited = true;
+            updateSigninStatus();
+        }
+
+        function updateSigninStatus() {
+            if (gapiInited && gisInited) {
+                document.getElementById('connectBtn').disabled = false;
+            }
+        }
+
+        // 处理认证
+        function handleAuthClick() {
+            if (!gapiInited || !gisInited) {
+                document.getElementById('apiStatus').innerHTML = 
+                    '<i class="fas fa-exclamation-triangle"></i> Google API未初始化完成';
+                document.getElementById('apiStatus').className = 'api-status error';
+                return;
+            }
+
+            tokenClient.callback = async (resp) => {
+                if (resp.error !== undefined) {
+                    document.getElementById('apiStatus').innerHTML = 
+                        '<i class="fas fa-exclamation-triangle"></i> 认证失败: ' + resp.error;
+                    document.getElementById('apiStatus').className = 'api-status error';
+                    return;
+                }
+                
+                document.getElementById('apiStatus').innerHTML = 
+                    '<i class="fas fa-check-circle"></i> 已连接到 Google Calendar';
+                document.getElementById('apiStatus').className = 'api-status connected';
+                document.getElementById('connectBtn').innerHTML = 
+                    '<i class="fab fa-google"></i> 已连接';
+                document.getElementById('connectBtn').disabled = true;
+                
+                await fetchCalendarEvents();
+            };
+
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                tokenClient.requestAccessToken({prompt: ''});
+            }
+        }
+
+        // 获取日历事件
+        async function fetchCalendarEvents() {
+            try {
+                document.getElementById('apiStatus').innerHTML = 
+                    '<i class="fas fa-sync-alt fa-spin"></i> 正在获取日历事件...';
+                
+                const now = new Date();
+                const oneMonthLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+                
+                const response = await gapi.client.calendar.events.list({
+                    'calendarId': 'primary',
+                    'timeMin': now.toISOString(),
+                    'timeMax': oneMonthLater.toISOString(),
+                    'showDeleted': false,
+                    'singleEvents': true,
+                    'maxResults': 20,
+                    'orderBy': 'startTime',
+                });
+                
+                calendarEvents = response.result.items;
+                populateTaskSelector();
+                
+                document.getElementById('apiStatus').innerHTML = 
+                    `<i class="fas fa-check-circle"></i> 已加载 ${calendarEvents.length} 个未来事件`;
+                document.getElementById('apiStatus').className = 'api-status connected';
+                
+            } catch (error) {
+                console.error('Error fetching calendar events:', error);
+                document.getElementById('apiStatus').innerHTML = 
+                    '<i class="fas fa-exclamation-triangle"></i> 获取事件失败: ' + error.message;
+                document.getElementById('apiStatus').className = 'api-status error';
+            }
+        }
+
+        // 填充任务选择器
+        function populateTaskSelector() {
+            const taskSelect = document.getElementById('taskSelect');
+            taskSelect.innerHTML = '<option value="">从Google Calendar选择任务</option>';
+            
+            if (calendarEvents.length === 0) {
+                taskSelect.innerHTML += '<option value="">未找到未来事件</option>';
+                return;
+            }
+            
+            calendarEvents.forEach((event, index) => {
+                const start = event.start.dateTime || event.start.date;
+                const startDate = new Date(start);
+                const eventName = event.summary || '未命名事件';
+                const dateStr = startDate.toLocaleDateString('zh-CN');
+                
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `${dateStr} - ${eventName}`;
+                taskSelect.appendChild(option);
+            });
+            
+            // 自动选择第一个事件
+            if (calendarEvents.length > 0) {
+                taskSelect.value = '0';
+                setTaskFromCalendar(0);
+            }
+        }
+
+        // 从日历设置任务
+        function setTaskFromCalendar(eventIndex) {
+            const event = calendarEvents[eventIndex];
+            if (!event) return;
+            
+            const start = event.start.dateTime || event.start.date;
+            currentTaskDate = new Date(start);
+            const eventName = event.summary || '未命名事件';
+            const dateStr = currentTaskDate.toLocaleDateString('zh-CN');
+            
+            document.getElementById('currentTask').textContent = 
+                `当前倒计时: ${eventName} (${dateStr})`;
+            
+            document.getElementById('motivation-text').textContent = 
+                `为 "${eventName}" 做好准备！`;
+            
+            // 设置进度条起始日期（事件前30天）
+            window.taskStartDate = new Date(currentTaskDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+            
+            updateCountdown();
+        }
+
+        // 更新当前时间
+        function updateCurrentTime() {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            document.getElementById('current-time').textContent = `${hours}:${minutes}:${seconds}`;
+            
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            const date = now.getDate();
+            const day = now.getDay();
+            const dayNames = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"];
+            document.getElementById('current-date').textContent = `${year}年${month}月${date}日 ${dayNames[day]}`;
+        }
+
+        // 更新倒计时
+        function updateCountdown() {
+            if (!currentTaskDate) return;
+            
+            const now = new Date();
+            const timeRemaining = currentTaskDate - now;
+            
+            if (timeRemaining <= 0) {
+                document.getElementById('days').textContent = '00';
+                document.getElementById('hours').textContent = '00';
+                document.getElementById('minutes').textContent = '00';
+                document.getElementById('seconds').textContent = '00';
+                document.getElementById('motivation-text').textContent = "任务已完成或已过期！";
+                return;
+            }
+            
+            const days = Math.floor(timeRemaining / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeRemaining % (1000 * 60)) / 1000);
+            
+            document.getElementById('days').textContent = days.toString().padStart(2, '0');
+            document.getElementById('hours').textContent = hours.toString().padStart(2, '0');
+            document.getElementById('minutes').textContent = minutes.toString().padStart(2, '0');
+            document.getElementById('seconds').textContent = seconds.toString().padStart(2, '0');
+            
+            // 计算进度条
+            if (window.taskStartDate) {
+                const totalDuration = currentTaskDate - window.taskStartDate;
+                const elapsed = now - window.taskStartDate;
+                const progressPercentage = Math.min(Math.max((elapsed / totalDuration) * 100, 0), 100);
+                document.getElementById('progress-bar').style.width = progressPercentage + '%';
+            }
+            
+            updateMotivation(days);
+        }
+
+        function updateMotivation(days) {
+            const motivationText = document.getElementById('motivation-text');
+            if (days > 30) {
+                motivationText.textContent = "时间还很充裕，制定计划，稳步前进！";
+            } else if (days > 14) {
+                motivationText.textContent = "关键时期，坚持就是胜利！";
+            } else if (days > 7) {
+                motivationText.textContent = "最后冲刺，全力以赴！";
+            } else if (days > 3) {
+                motivationText.textContent = "胜利在望，保持专注！";
+            } else if (days > 1) {
+                motivationText.textContent = "即将到达终点，坚持住！";
+            } else if (days === 1) {
+                motivationText.textContent = "明天就是重要日子，好好休息，保持最佳状态！";
+            } else {
+                motivationText.textContent = "今天就是重要日子，相信自己，加油！";
+            }
+        }
+
+        // 事件监听器
+        document.getElementById('connectBtn').addEventListener('click', handleAuthClick);
+        document.getElementById('refreshBtn').addEventListener('click', fetchCalendarEvents);
+        document.getElementById('taskSelect').addEventListener('change', function(e) {
+            if (e.target.value) {
+                setTaskFromCalendar(parseInt(e.target.value));
+            }
+        });
+
+        // 初始化
+        window.taskStartDate = new Date();
+        updateCurrentTime();
+        setInterval(updateCurrentTime, 1000);
+        setInterval(updateCountdown, 1000);
+
+        // 日历功能
+        function refreshCalendar() {
+            const iframe = document.querySelector('.calendar-iframe');
+            iframe.src = iframe.src;
+        }
+
+        function openCalendarInNewTab() {
+            window.open('https://calendar.google.com/calendar/embed?src=232094tin%40fyk.edu.my&ctz=Asia%2FSingapore', '_blank');
+        }
+
+        // 加载Google API
+        gapiLoaded();
+        gisLoaded();
+    </script>
+</body>
+</html>
