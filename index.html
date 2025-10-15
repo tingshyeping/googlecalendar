@@ -15,6 +15,10 @@
         }
         
         body {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
             background: url('OMEN_Techrunner.png') no-repeat center center fixed;
             background-size: cover;
             color: #fff;
@@ -22,6 +26,13 @@
             padding: 20px;
             position: relative;
             overflow-x: hidden;
+        }
+        /* 允许输入框和选择框可以选中文本 */
+        input, textarea, select {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
         }
         
         body::before {
@@ -720,4 +731,5 @@
         gisLoaded();
     </script>
 </body>
+
 </html>
